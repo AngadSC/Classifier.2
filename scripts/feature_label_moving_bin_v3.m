@@ -23,7 +23,7 @@ function outFiles = feature_label_moving_bin_v3(inputDir, outputDir, inputDir_la
 
 % ---------------- Defaults ----------------
 if nargin < 1 || isempty(inputDir)
-    inputDir = fullfile(pwd, 'stage_two_Matt');
+    inputDir = fullfile(pwd, 'data');
 end
 if nargin < 2 || isempty(outputDir)
     outputDir = fullfile(pwd, 'feature_label_moving_v3');
@@ -53,12 +53,15 @@ baselineEnd = max(0, round(baselineDurSec * samplerate));
 startAfterBaseline = baselineEnd + 1;
 
 % ---------------- Gather EEG files ----------------
-eegFiles = dir(fullfile(inputDir, 'finalcorrected_EEG_*.mat'));
+% Find EEG files: prefer test_*.mat; fallback to finalcorrected_EEG_*.mat
+eegFiles = dir(fullfile(inputDir, 'test_*.mat'));
+if isempty(eegFiles)
+    eegFiles = dir(fullfile(inputDir, 'finalcorrected_EEG_*.mat'));
+end
 if isempty(eegFiles)
     error('No EEG files found at: %s', inputDir);
 end
 
-outFiles = {};
 
 for i = 1:numel(eegFiles)
     % Participant ID from filename
