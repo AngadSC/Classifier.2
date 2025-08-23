@@ -5,3 +5,12 @@ data/test_20.mat
 data/test_21.mat
 data/test_22.mat
 *.asv
+outputs/features_labels_raw_20.mat
+outputs/features_labels_raw_20.mat
+outputs/features_labels_raw_21.mat
+outputs/features_labels_raw_20.mat
+outputs/features_labels_raw_22.mat
+outputs/LDA_results_raw.mat
+outputs/moving-bin-raw/features_labels_raw_20.mat
+outputs/moving-bin-raw/features_labels_raw_21.mat
+outputs/moving-bin-raw/features_labels_raw_22.mat

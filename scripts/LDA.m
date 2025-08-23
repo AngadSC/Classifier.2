@@ -3,8 +3,9 @@
 % ====================================================================
 
 % ------------------ Setup ------------------
-inputDir = '/Users/faisalanqouor/Desktop/Research/Multivariate_pipeline/feature_label_moving_v3';
-outputDir = '/Users/faisalanqouor/Desktop/Research/Multivariate_pipeline/results_moving_v3';
+inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving-bin-raw";
+outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs";
+
 
 if ~exist(outputDir, 'dir')
     mkdir(outputDir);
