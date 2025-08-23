@@ -4,7 +4,7 @@
 transformation_type = 'raw';  % Change as needed
 
 % Load LDA results
-load(sprintf('/Users/faisalanqouor/Desktop/Research/Multivariate_pipeline/results_moving_v3/LDA_results_%s.mat', transformation_type));
+load(sprintf('C:/Users/Angad/OneDrive/Desktop/Comp Memory Lab/Classifier.2/outputs/LDA_results_%s.mat', transformation_type));
 
 % Extract participant IDs
 subjects = fieldnames(AUC_all);
