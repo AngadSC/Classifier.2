@@ -3,7 +3,8 @@
 % ====================================================================
 
 % Load SVM results
-load("C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\SVM_results_raw.mat")
+%load("C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\SVM_results_raw.mat")
+load( "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\SVM\SVM_results_raw.mat")
 
 % Extract participant IDs
 subjects = fieldnames(AUC_all);
