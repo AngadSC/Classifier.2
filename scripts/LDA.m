@@ -50,7 +50,8 @@ for i = 1:length(featureFiles)
     AUC_all.(subjField).HitMiss = run_lda_auc(X_task, y_bin,'HITvsMiss');
 
     % ------------------ Task 3: FA vs CR ------------------
-    skip_FA_CR = {'P65', 'P58', 'P56', 'P09'};  
+   % skip_FA_CR = {'P65', 'P58', 'P56', 'P09'}; 
+    skip_FA_CR = {};
 if ismember(subjField, skip_FA_CR)
     fprintf('Skipping participant %s for FA vs CR: manually excluded.\n', participantID);
     AUC_all.(subjField).FAvsCR = NaN;
