@@ -19,9 +19,10 @@
 
 
 
-eventDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage2";
-eegDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage2";
-outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage3"
+eventDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving_bin_after_filter";
+eegDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving_bin_after_filter";
+outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage3";
+
 
 % Create output directory if it doesn't exist
 if ~exist(outputDir, 'dir')
@@ -29,7 +30,7 @@ if ~exist(outputDir, 'dir')
 end
 
 % Get event files
-eventFiles = dir(fullfile(eventDir, 'stage2_filter_events_*.mat'));
+eventFiles = dir(fullfile(eventDir, 'features_labels_raw_*.mat'));
 
 % Initialize FA count storage
 filteredParticipants_FA_CR = {};

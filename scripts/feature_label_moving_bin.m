@@ -6,7 +6,7 @@
 
 % ============== CONFIGURATION SWITCH ==============
 % CHANGE THIS TO SWITCH BETWEEN RAW AND FILTERED DATA
-USE_RAW_DATA = false;  % Set to true for raw data, false for stage2 filtered
+USE_RAW_DATA = true;  % Set to true for raw data, false for stage2 filtered
 % ==================================================
 
 % --- Set paths based on data source ---
@@ -14,7 +14,7 @@ if USE_RAW_DATA
     % RAW DATA CONFIGURATION
     inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\data";
     inputDir_label = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\data";  % Can be different if needed
-    outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving-bin-raw";
+    outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving_bin_raw";
     
     eegPattern = 'test_*.mat';
     eventPattern = 'events_%s.mat';
