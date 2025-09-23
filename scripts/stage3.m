@@ -13,9 +13,11 @@
 % ====================================================================
 
 % Define directories
-eventDir = '/Users/faisalanqouor/Desktop/Research/Data_filtering/stage_two_Matt';
-eegDir = '/Users/faisalanqouor/Desktop/Research/Data_filtering/stage_two_Matt';
-outputDir = '/Users/faisalanqouor/Desktop/Research/Data_filtering/stage_three_Matt';
+%eventDir = '/Users/faisalanqouor/Desktop/Research/Data_filtering/stage_two_Matt';
+%eegDir = '/Users/faisalanqouor/Desktop/Research/Data_filtering/stage_two_Matt';
+%outputDir = '/Users/faisalanqouor/Desktop/Research/Data_filtering/stage_three_Matt';
+
+eventDir = " "
 
 % Create output directory if it doesn't exist
 if ~exist(outputDir, 'dir')
@@ -23,7 +25,7 @@ if ~exist(outputDir, 'dir')
 end
 
 % Get event files
-eventFiles = dir(fullfile(eventDir, 'finalcorrected_events_*.mat'));
+eventFiles = dir(fullfile(eventDir, 'feeinalcorrected_events_*.mat'));
 
 % Initialize FA count storage
 filteredParticipants_FA_CR = {};

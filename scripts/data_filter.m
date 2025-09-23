@@ -24,16 +24,21 @@
 %
 % ====================================================================
 
-eegDir = '/Users/faisalanqouor/Desktop/Research/Data_MV';
-eventDir = '/Users/faisalanqouor/Desktop/Research/Data_MV';
-outputDir = '/Users/faisalanqouor/Desktop/Research/Data_MV/s1+s2'; 
+%eegDir = '/Users/faisalanqouor/Desktop/Research/Data_MV';
+%eventDir = '/Users/faisalanqouor/Desktop/Research/Data_MV';
+%outputDir = '/Users/faisalanqouor/Desktop/Research/Data_MV/s1+s2'; 
+
+eegDir = "\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\data";
+eventDir = "\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\data"; 
+outputDir = "\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage1";
+
 
 if ~exist(outputDir, 'dir')
     mkdir(outputDir);
 end
 
-eegFiles = dir(fullfile(eegDir, '*.mat')); 
-eventFiles = dir(fullfile(eventDir, '*.mat'));
+eegFiles = dir(fullfile(eegDir, 'test_*.mat')); 
+eventFiles = dir(fullfile(eventDir, 'events_*.mat'));
 
 % Initialize storage variables
 filteredEEG = {}; 
@@ -54,10 +59,14 @@ for i = 1:length(eegFiles)
     % Load EEG data
     eegFile = fullfile(eegFiles(i).folder, eegFiles(i).name);
     eegData = load(eegFile);
+    %eegsignal = eegData.test;
     eegsignal = eegData.data;
 
+
     % Fix the leading zero issue in event (behavior) filenames
-    eventFile = fullfile(eventDir, ['Label_', sprintf('%02d', str2double(participantID)), '.mat']); % Format ID with leading zero
+    %eventFile = fullfile(eventDir, ['Label_', sprintf('%02d', str2double(participantID)), '.mat']); % Format ID with leading zero
+    eventFile = fullfile(eventDir, sprintf('events_%s.mat', participantID));
+
 
     if ~isfile(eventFile)
         fprintf('Participant %s skipped: Missing event file.\n', participantID);
@@ -66,7 +75,10 @@ for i = 1:length(eegFiles)
 
     % Load event data
     eventData = load(eventFile);
-    eventCodes = eventData.label(); % Extract trial outcomes
+    %eventCodes = eventData.events();
+    eventCodes = eventData.test(:,2);
+
+    %  % Extract trial outcomes
 
     % Compute accuracy metrics
     hits = sum(eventCodes == HIT_CODE);
