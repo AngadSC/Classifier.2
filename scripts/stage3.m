@@ -17,7 +17,11 @@
 %eegDir = '/Users/faisalanqouor/Desktop/Research/Data_filtering/stage_two_Matt';
 %outputDir = '/Users/faisalanqouor/Desktop/Research/Data_filtering/stage_three_Matt';
 
-eventDir = " "
+
+
+eventDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage2";
+eegDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage2";
+outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage3"
 
 % Create output directory if it doesn't exist
 if ~exist(outputDir, 'dir')
@@ -25,7 +29,7 @@ if ~exist(outputDir, 'dir')
 end
 
 % Get event files
-eventFiles = dir(fullfile(eventDir, 'feeinalcorrected_events_*.mat'));
+eventFiles = dir(fullfile(eventDir, 'stage2_filter_events_*.mat'));
 
 % Initialize FA count storage
 filteredParticipants_FA_CR = {};
@@ -38,11 +42,11 @@ for i = 1:length(eventFiles)
     participantID = regexp(eventFiles(i).name, '\d+', 'match', 'once');
     
     % Load event data
-    eventFile = fullfile(eventDir, sprintf('finalcorrected_events_%s.mat', participantID));
+    eventFile = fullfile(eventDir, sprintf('stage2_filter_events_%s.mat', participantID));
     eventData = load(eventFile);
     
     % Load EEG data
-    eegFile = fullfile(eegDir, sprintf('finalcorrected_EEG_%s.mat', participantID));
+    eegFile = fullfile(eegDir, sprintf('stage2_filter_EEG_%s.mat', participantID));
     eegData = load(eegFile);
 
     % Extract event codes & EEG signal

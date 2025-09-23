@@ -24,9 +24,13 @@
 % ====================================================================
 
 % Define directories
-eegDir = '/Users/faisalanqouor/Desktop/Research/data_sucheta/erp/test';
-eventDir = '/Users/faisalanqouor/Desktop/Research/data_sucheta/behaviour';
-outputDir = '/Users/faisalanqouor/Desktop/Research/Data_MV';
+%eegDir = '/Users/faisalanqouor/Desktop/Research/data_sucheta/erp/test';
+%eventDir = '/Users/faisalanqouor/Desktop/Research/data_sucheta/behaviour';
+%outputDir = '/Users/faisalanqouor/Desktop/Research/Data_MV';
+
+eegDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage1";
+eventDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage1";
+outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage2";
 
 if ~exist(outputDir, 'dir')
     mkdir(outputDir);
@@ -41,7 +45,7 @@ pointToPointThreshold = 25; % Point-to-point voltage difference threshold in µV
 rejectionThreshold = 0.15; % **15% rejection threshold**
 
 % Get EEG files
-eegFiles = dir(fullfile(eegDir, 'test_*.mat'));
+eegFiles = dir(fullfile(eegDir, 'filtered_EEG_*.mat'));
 
 excludedParticipants = {}; % Store excluded participant IDs
 summaryResults = struct(); % Store rejection summary
@@ -52,21 +56,24 @@ for i = 1:length(eegFiles)
     % Load EEG data
     eegFile = fullfile(eegFiles(i).folder, eegFiles(i).name);
     eegData = load(eegFile);
-    eegsignal = eegData.data; % instead of eegData.eegsignal
+    %eegsignal = eegData.data; % instead of eegData.eegsignal
+    eegsignal = eegData.eegsignal;
+
         
     % Extract participant ID
     participantID = regexp(eegFiles(i).name, '\d+', 'match', 'once'); 
     participantKey = sprintf('P%s', participantID); % Ensure field name starts with a letter
    
     % Load event data
-    eventFile = fullfile(eventDir, sprintf('events_%s.mat', participantID));
+    eventFile = fullfile(eventDir, sprintf('filtered_events_%s.mat', participantID));
     if ~exist(eventFile, 'file')
         fprintf('Participant %s skipped: Missing event file.\n', participantID);
         continue;
     end
     
     eventData = load(eventFile);
-    eventCodes = eventData.test(:, 2);
+    %eventCodes = eventData.test(:, 2);
+    eventCodes = eventData.eventCodes(:);
         
     data = [];
     validTrials = [];
@@ -114,8 +121,8 @@ for i = 1:length(eegFiles)
     label = eventCodes(validTrials, :); % Select only valid trials
 
     % Save corrected EEG and event codes
-    save(fullfile(outputDir, sprintf('EEG_%s.mat', participantID)), 'data');
-    save(fullfile(outputDir, sprintf('Label_%s.mat', participantID)), 'label');
+    save(fullfile(outputDir, sprintf('stage2_filter_EEG_%s.mat', participantID)), 'data');
+    save(fullfile(outputDir, sprintf('stage2_filter_events_%s.mat', participantID)), 'label');
 
     % Store rejection summary
     summaryResults.(participantKey) = struct(...
