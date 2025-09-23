@@ -1,0 +1,9 @@
+STUDY
+1 - remembered
+0 - forgotten
+
+TEST
+1 - hit
+2 - miss
+3 - correct rejection
+4 - false alarm
