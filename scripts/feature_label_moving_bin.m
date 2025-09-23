@@ -13,9 +13,16 @@
 
 % --- Paths ---
 %inputDir = '/"C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier\events_20.mat"';
-inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\data";
+%inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\data";
+inputDir = "C:\Users\Angad\OneDrive\Desktop\Memory Lab Classifier\Classifier.2\data";
 %outputDir = '/Users/faisalanqouor/Desktop/Research/Multivariate_pipeline/feature_label_moving_v3';
-outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs";
+
+%outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs";
+outputDir = "C:\Users\Angad\OneDrive\Desktop\Memory Lab Classifier\Classifier.2\outputs\moving_bin_raw";
+
+%outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs";
+%outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving-bin-raw";
+
 %inputDir_label = '/Users/faisalanqouor/Desktop/Research/stage_two_Matt';
 inputDir_label = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\data";
 if ~exist(outputDir, 'dir')

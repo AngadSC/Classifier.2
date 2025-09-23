@@ -4,8 +4,8 @@
 transformation_type = 'raw';  % Change as needed
 
 % Load LDA results
-load(sprintf('C:/Users/Angad/OneDrive/Desktop/Comp Memory Lab/Classifier.2/outputs/LDA_results_%s.mat', transformation_type));
-
+%load(sprintf('C:/Users/Angad/OneDrive/Desktop/Comp Memory Lab/Classifier.2/outputs/LDA_results_%s.mat', transformation_type));
+load(sprintf('C:/Users/Angad/OneDrive/Desktop/Comp Memory Lab/Classifier.2/outputs/LDA/LDA_results_%s.mat', transformation_type));
 % Extract participant IDs
 subjects = fieldnames(AUC_all);
 
@@ -99,4 +99,40 @@ end
 
 disp('Summary complete.');
 
+S = AUC_stats.(transformation_type);
+
+% Collect available tasks
+means = []; cil = []; cih = []; Ns = []; pvals = []; labels = {};
+for t = 1:numel(tasks)
+    if isfield(S, tasks{t})
+        st = S.(tasks{t});
+        means(end+1) = st.Mean;                 %#ok<AGROW>
+        cil(end+1)   = st.CI(1);                %#ok<AGROW>
+        cih(end+1)   = st.CI(2);                %#ok<AGROW>
+        Ns(end+1)    = st.N;                    %#ok<AGROW>
+        pvals(end+1) = st.P;                    %#ok<AGROW>
+        labels{end+1}= task_labels{t};          %#ok<AGROW>
+    end
+end
+if isempty(means), error('No tasks available in AUC_stats.%s.', transformation_type); end
+
+% Errorbar values from CI
+errLow  = means - cil;
+errHigh = cih   - means;
+
+figure('Color','w','Position',[100 100 900 500]);
+bar(means); hold on;
+errorbar(1:numel(means), means, errLow, errHigh, 'k', 'LineStyle','none', 'LineWidth',1.5);
+yline(0.5,'--','Chance','LabelHorizontalAlignment','left','LabelVerticalAlignment','bottom');
+
+set(gca,'XTick',1:numel(means),'XTickLabel',labels,'FontSize',12);
+ylim([0 1]); xlim([0.5 numel(means)+0.5]);
+ylabel('AUC'); grid on; box off;
+title(sprintf('LDA AUCs (%s)', upper(transformation_type)));
+
+% annotate N and p
+for i = 1:numel(means)
+    text(i, min(0.97, means(i)+0.07), sprintf('N=%d, p=%.3f', Ns(i), pvals(i)), ...
+        'HorizontalAlignment','center','FontSize',10);
+end
 %testing 
