@@ -1,11 +1,27 @@
 % ====================================================================
 % Summary Stats for Multivariate LDA Classification (Sucheta-style CI and t-test)
 % ====================================================================
-transformation_type = 'raw';  % Change as needed
 
-% Load LDA results
-%load(sprintf('C:/Users/Angad/OneDrive/Desktop/Comp Memory Lab/Classifier.2/outputs/LDA_results_%s.mat', transformation_type));
-load(sprintf('C:/Users/Angad/OneDrive/Desktop/Comp Memory Lab/Classifier.2/outputs/LDA/LDA_results_%s.mat', transformation_type));
+% ------------------ Path Selection Flag (NEW) ------------------
+% Toggle which LDA results file to load:
+%   true  -> use RAW results  (expects: LDA_results_raw.mat)
+%   false -> use FILTERED results (expects: LDA_results_filtered.mat)
+useRawResults = false;   % <-- set this as needed
+
+% ------------------ Resolve results file + label (NEW) ------------------
+if useRawResults
+    transformation_type = 'raw';
+    resultsFile = "C:/Users/Angad/OneDrive/Desktop/Comp Memory Lab/Classifier.2/outputs/LDA/LDA_results_raw.mat";
+    fprintf('Using RAW LDA results\n');
+else
+    transformation_type = 'filtered';
+    resultsFile = "C:/Users/Angad/OneDrive/Desktop/Comp Memory Lab/Classifier.2/outputs/LDA/LDA_results_filtered.mat";
+    fprintf('Using FILTERED LDA results\n');
+end
+
+% ------------------ Load LDA results (UNCHANGED logic) ------------------
+load(resultsFile, 'AUC_all');
+
 % Extract participant IDs
 subjects = fieldnames(AUC_all);
 
@@ -135,4 +151,3 @@ for i = 1:numel(means)
     text(i, min(0.97, means(i)+0.07), sprintf('N=%d, p=%.3f', Ns(i), pvals(i)), ...
         'HorizontalAlignment','center','FontSize',10);
 end
-%testing 

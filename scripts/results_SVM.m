@@ -2,14 +2,31 @@
 % Summary Stats for Multivariate SVM Classification (Like Table 4)
 % ====================================================================
 
-% Load SVM results
-%load("C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\SVM_results_raw.mat")
-load( "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\SVM\SVM_results_raw.mat")
+% ------------------ Path Selection Flag ------------------
+% true  -> use RAW results      (expects: SVM_results_raw.mat)
+% false -> use FILTERED results (expects: SVM_results_filtered.mat)
+useRawResults = false;   % <-- toggle here
 
-% Extract participant IDs
+% ------------------ Resolve results file + label ------------------
+if useRawResults
+    transformation_type = 'raw';
+    resultsFile = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\SVM\SVM_results_raw.mat";
+    fprintf('Using RAW SVM results\n');
+else
+    transformation_type = 'filtered';
+    resultsFile = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\SVM\SVM_results_filtered.mat";
+    fprintf('Using FILTERED SVM results\n');
+end
+
+% ------------------ Load SVM results ------------------
+load(resultsFile, 'AUC_all');
+
+% ------------------ Subjects & tasks ------------------
 subjects = fieldnames(AUC_all);
 tasks = {'OldNew','HitMiss','FAvsCR'};
+task_labels = {'Old/New','Hit/Miss','FA/CR'};
 
+% ------------------ Quick validity counts (unchanged logic) ------------------
 for i = 1:numel(tasks)
     task = tasks{i};
     vals = nan(numel(subjects),1);
@@ -27,44 +44,85 @@ for i = 1:numel(tasks)
     bad = subjects(~isfinite(vals));
     fprintf('%s: valid=%d / total=%d\n', task, sum(isfinite(vals)), numel(vals));
     if ~isempty(bad)
-        fprintf('  Missing/NaN: %s\n', strjoin(bad', ', ')); 
+        fprintf('  Missing/NaN: %s\n', strjoin(bad', ', '));
     end
 end
 
+% =========================
+% SVM Summary (LDA-style)
+% =========================
+% Build a stats struct (no logic changes — same CI and t-tests)
+AUC_stats = struct();
 
-% Classification tasks
-tasks = {'OldNew', 'HitMiss', 'FAvsCR'};
-task_labels = {'Old/New', 'Hit/Miss', 'FA/CR'};
-
-fprintf('SVM Classification Results for raw\n');
-fprintf('--------------------------------------------\n');
-
-for i = 1:length(tasks)
+for i = 0 + (1:length(tasks))
     task = tasks{i};
     aucs = [];
 
     for s = 1:length(subjects)
         subj = subjects{s};
-        val = AUC_all.(subj).(task);
-        if ~isnan(val)
-            aucs(end+1) = val;
+        if isfield(AUC_all.(subj), task)
+            val = AUC_all.(subj).(task);
+            if ~isempty(val) && isscalar(val)
+                v = val;                 % scalar AUC
+            elseif ~isempty(val)
+                v = mean(val(:));        % collapse per-fold if needed
+            else
+                v = NaN;
+            end
+            if ~isnan(v), aucs(end+1) = v; end %#ok<SAGROW>
         end
     end
 
-    % Compute mean and 95% confidence interval
-    M = mean(aucs);
-    CI = [M - 1.96*std(aucs)/sqrt(length(aucs)), ...
-          M + 1.96*std(aucs)/sqrt(length(aucs))];
+    if numel(aucs) >= 3
+        M  = mean(aucs);
+        SE = std(aucs)/sqrt(numel(aucs));
+        % Keep original Z-based 95% CI
+        CI = [M - 1.96*SE, M + 1.96*SE];
+        [~, pval, ~, stats] = ttest(aucs, 0.5);
 
-    % Perform one-sample t-test against 0.5 (chance)
-    [~, pval, ~, stats] = ttest(aucs, 0.5);
-    
-    % Report
-    fprintf('%-12s AUC = %.3f [%.3f, %.3f], t(%d) = %.2f, p = %.4f\n', ...
-        task_labels{i}, M, CI(1), CI(2), stats.df, stats.tstat, pval);
+        AUC_stats.(transformation_type).(task) = struct( ...
+            'Mean', M, ...
+            'CI', CI, ...
+            'N', numel(aucs), ...
+            'T', stats.tstat, ...
+            'DF', stats.df, ...
+            'P', pval );
+    end
 end
+
+% ------------------ LDA-style table printout ------------------
+fprintf('\nMultivariate SVM Classification Summary (Transformation = %s)\n', upper(transformation_type));
+fprintf('%-12s %-25s %-25s %-25s\n', 'Metric', 'Old/New', 'Hit/Miss', 'FA/CR');
+fprintf('%s\n', repmat('-', 1, 90));
+
+metrics = {'Mean AUC','95%% CI','t(df), p','N'};
+for m = 1:length(metrics)
+    fprintf('%-12s', metrics{m});
+    for i = 1:length(tasks)
+        task = tasks{i};
+        if isfield(AUC_stats.(transformation_type), task)
+            st = AUC_stats.(transformation_type).(task);
+            switch metrics{m}
+                case 'Mean AUC'
+                    entry = sprintf('%.3f', st.Mean);
+                case '95%% CI'
+                    entry = sprintf('[%.3f, %.3f]', st.CI(1), st.CI(2));
+                case 't(df), p'
+                    entry = sprintf('t(%d)=%.2f, p=%.4f', st.DF, st.T, st.P);
+                case 'N'
+                    entry = sprintf('%d', st.N);
+            end
+        else
+            entry = 'N/A';
+        end
+        fprintf('%-25s', entry);
+    end
+    fprintf('\n');
+end
+disp('Summary complete.');
+
 % ---------------------------
-% Plot SVM AUCs by task (raw)
+% Plot SVM AUCs by task (title reflects raw/filtered)
 % ---------------------------
 means   = nan(1, numel(tasks));
 CIs     = nan(numel(tasks), 2);
@@ -77,9 +135,16 @@ for i = 1:numel(tasks)
 
     for s = 1:numel(subjects)
         subj = subjects{s};
-        val  = AUC_all.(subj).(task);
-        if ~isnan(val)
-            aucs(end+1) = val; %#ok<SAGROW>
+        if isfield(AUC_all.(subj), task)
+            val  = AUC_all.(subj).(task);
+            if ~isempty(val) && isscalar(val)
+                a = val;
+            elseif ~isempty(val)
+                a = mean(val(:));
+            else
+                a = NaN;
+            end
+            if ~isnan(a), aucs(end+1) = a; end %#ok<SAGROW>
         end
     end
 
@@ -93,7 +158,7 @@ for i = 1:numel(tasks)
     pvals(i) = p;
 end
 
-fig = figure('Color','w','Name','SVM AUC by Task (raw)'); hold on;
+fig = figure('Color','w','Name',sprintf('SVM AUC by Task (%s)', transformation_type)); hold on;
 
 % Bar + 95% CI error bars
 b = bar(1:numel(tasks), means, 'FaceColor',[0.7 0.78 0.92], 'EdgeColor','none'); %#ok<NASGU>
@@ -113,7 +178,7 @@ yline(0.5, '--', 'Chance', 'LabelHorizontalAlignment','left', 'HandleVisibility'
 % Ticks/labels
 set(gca, 'XTick', 1:numel(tasks), 'XTickLabel', task_labels, 'FontSize', 11);
 ylabel('AUC');
-title('SVM Classification (raw)');
+title(sprintf('SVM Classification (%s)', transformation_type));
 ylim([0.4 1]); grid on; box on;
 
 % Significance stars
@@ -135,4 +200,4 @@ hold off;
 
 % Optional: save the figure
 % outdir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs";
-% saveas(fig, fullfile(outdir, 'SVM_AUC_plot_raw.png'));
+% saveas(fig, fullfile(outdir, sprintf('SVM_AUC_plot_%s.png', transformation_type)));

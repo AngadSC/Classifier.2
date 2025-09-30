@@ -9,14 +9,14 @@ useRawPath = false;  % CHANGE THIS FLAG TO SWITCH BETWEEN RAW AND FILTERED
 % ------------------ Setup ------------------
 % Select input directory based on flag
 if useRawPath
-    inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving-bin-raw";
+    inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving_bin_raw";
     featurePattern = 'features_labels_raw_*.mat';
     outputFileName = 'LDA_results_raw.mat';
     fprintf('Using RAW data path\n');
 else
     % ADD YOUR FILTERED PATH HERE
     inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage3";  % Update this path
-    featurePattern = 'stage3_filtered_*.mat';  % Update this pattern if different
+    featurePattern = 'stage3_*.mat';  % Update this if the name the stage3 filter is saved as something else
     outputFileName = 'LDA_results_filtered.mat';
     fprintf('Using FILTERED data path\n');
 end
@@ -58,7 +58,8 @@ for i = 1:length(featureFiles)
     y = data.y;
     
     % Extract participant ID
-    participantID = regexp(featureFiles(i).name, '\d+', 'match', 'once');
+    tokens = regexp(featureFiles(i).name, '_(\d+)\.mat$', 'tokens', 'once');
+    participantID = tokens{1};
     subjField = ['P' participantID];
     fprintf('\nProcessing Participant %s\n', participantID);
     

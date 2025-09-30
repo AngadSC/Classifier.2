@@ -1,89 +1,146 @@
 %====================================================================
-% FA/CR Classification Participant Filtering (FA ≥ 10, FA Rate < 50%)
-% ====================================================================
-% This script filters participants for the FA/CR classification.
-% It ensures that only participants with:
-%   - At least 10 false alarms (FA ≥ 10)
-%   - A false alarm rate of **less than 50%**
+% Stage 3 — FA/CR Classification Participant Filtering (X,y preserved)
 %
-% - Runs AFTER baseline correction & feature extraction.
-% - Loads corrected EEG & event files, counts false alarms (FA = 4).
-% - Saves a new FA/CR-specific event & EEG file for classification.
+% PURPOSE
+%   This script filters participants for the FA/CR classification task
+%   using the *existing* moving-bin outputs (files named
+%   features_labels_raw_<ID>.mat that contain variables X and y).
 %
-% ====================================================================
+%   *** IMPORTANT GUARANTEES ***
+%   - Uses ONLY the specified criteria:
+%       (1) False Alarms (FA) >= 10
+%       (2) False Alarm rate < 50%   [strictly less than 50]
+%   - Does NOT add, change, or remove any other filters/criteria.
+%   - Does NOT change the shape or content of X or y for included
+%     participants; it simply re-saves X and y as-is to the output folder.
+%
+% INPUT (per participant)
+%   features_labels_raw_<ID>.mat
+%       X : [trials x features]   double   (unchanged by this script)
+%       y : [trials x 1]          double   (labels; 1=Hit, 2=Miss, 3=CR, 4=FA)
+%
+% OUTPUT (per participant that passes the gate)
+%   features_labels_raw_<ID>.mat  (saved to outputDir with the SAME X,y)
+%
+% ADDITIONAL OUTPUTS
+%   filtered_FA_CR_participants.mat : cell array 'included' of IDs that passed
+%   excluded_FA_CR_participants.mat : cell array 'excluded' of IDs that failed
+%
+% NOTES
+%   - This script does not subset trials or alter variables.
+%   - It only gates participants and re-saves X,y for those who pass.
+%====================================================================
 
-% Define directories
-%eventDir = '/Users/faisalanqouor/Desktop/Research/Data_filtering/stage_two_Matt';
-%eegDir = '/Users/faisalanqouor/Desktop/Research/Data_filtering/stage_two_Matt';
-%outputDir = '/Users/faisalanqouor/Desktop/Research/Data_filtering/stage_three_Matt';
-
-
-
-eventDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving_bin_after_filter";
-eegDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving_bin_after_filter";
+%----------------------------
+% Directory configuration
+%----------------------------
+inputDir  = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving_bin_after_filter";
 outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage3";
 
-
-% Create output directory if it doesn't exist
+% Ensure the output directory exists; create if it does not.
 if ~exist(outputDir, 'dir')
     mkdir(outputDir);
 end
 
-% Get event files
-eventFiles = dir(fullfile(eventDir, 'features_labels_raw_*.mat'));
+%---------------------------------------
+% Find all per-participant X,y files
+%---------------------------------------
+% We only look for files named 'features_labels_raw_*.mat' in inputDir.
+files = dir(fullfile(inputDir, "features_labels_raw_*.mat"));
 
-% Initialize FA count storage
-filteredParticipants_FA_CR = {};
-excluded_FA_CR = {};
+% Prepare containers to record which participant IDs are included/excluded.
+included = {};   % cell array of strings (participant IDs that pass)
+excluded = {};   % cell array of strings (participant IDs that fail)
 
-% Loop through each participant
-for i = 1:length(eventFiles)
-    
-    % Extract participant ID
-    participantID = regexp(eventFiles(i).name, '\d+', 'match', 'once');
-    
-    % Load event data
-    eventFile = fullfile(eventDir, sprintf('stage2_filter_events_%s.mat', participantID));
-    eventData = load(eventFile);
-    
-    % Load EEG data
-    eegFile = fullfile(eegDir, sprintf('stage2_filter_EEG_%s.mat', participantID));
-    eegData = load(eegFile);
+%---------------------------------------
+% Constants for label codes (from labels.txt)
+%---------------------------------------
+% TEST phase codes:
+%   1 = Hit, 2 = Miss, 3 = Correct Rejection (CR), 4 = False Alarm (FA)
+HIT_CODE = 1;  %#ok<NASGU>  % not directly used here, kept for clarity
+MISS_CODE = 2; %#ok<NASGU>  % not directly used here, kept for clarity
+CR_CODE = 3;
+FA_CODE = 4;
 
-    % Extract event codes & EEG signal
-    eventCodes = eventData.correctedEvents;  
-    correctedEEG = eegData.correctedEEG;
+%---------------------------------------
+% Loop over each participant file
+%---------------------------------------
+for i = 1:numel(files)
+    % Full filename and path of the current participant file
+    fname = files(i).name;
+    fpath = fullfile(files(i).folder, fname);
 
-    % Count False Alarms (event code = 4)
-    falseAlarms = sum(eventCodes == 4);
-    
-    % Count total New trials (FA + CR)
-    totalNewTrials = sum(eventCodes == 3 | eventCodes == 4);  % CR + FA
+    % Load the participant's X and y.
+    % EXPECTED: file contains variables X (trials x features) and y (trials x 1).
+    S = load(fpath);
 
-    % Compute False Alarm Rate
-    if totalNewTrials > 0
-        falseAlarmRate = (falseAlarms / totalNewTrials) * 100;
+    % Validate presence of X and y; error if missing (do not proceed silently).
+    assert(isfield(S,'X') && isfield(S,'y'), ...
+        'File %s must contain variables X and y.', fname);
+
+    % Ensure y is a column vector; X is trials x features.
+    X = S.X;
+    y = S.y(:);
+
+    % Double-check trial alignment: number of trials must match.
+    assert(size(X,1) == numel(y), ...
+        'Trials mismatch in %s: size(X,1)=%d vs numel(y)=%d.', ...
+        fname, size(X,1), numel(y));
+
+    %--------------------------------------------------------
+    % Compute FA/CR metrics used for participant-level gate
+    %--------------------------------------------------------
+    % Count False Alarms (FA == 4) and Correct Rejections (CR == 3)
+    faCount = sum(y == FA_CODE);
+    crCount = sum(y == CR_CODE);
+
+    % "New" trials are CR + FA
+    newTrials = faCount + crCount;
+
+    % Compute FA rate = FA / (CR + FA) * 100
+    % Guard against division by zero: if there are no new trials, define FA rate as 0.
+    if newTrials == 0
+        faRate = 0;
     else
-        falseAlarmRate = 0; % Prevent division by zero
+        faRate = (faCount / newTrials) * 100;
     end
 
-    % Apply filtering criteria
-    if falseAlarms >= 10 && falseAlarmRate <= 50
-        filteredParticipants_FA_CR{end+1} = participantID;
-        
-        % Save both filtered event codes and EEG signals
-        save(fullfile(outputDir, sprintf('filtered_FA_CR_events_%s.mat', participantID)), 'eventCodes');
-        save(fullfile(outputDir, sprintf('filtered_FA_CR_EEG_%s.mat', participantID)), 'correctedEEG');
+    % Extract participant ID digits from filename (e.g., '..._74.mat' -> '74')
+    pid = regexp(fname, '\d+', 'match', 'once');
 
-        fprintf('✅ Participant %s included in FA/CR classification (FA count = %d, FA rate = %.2f%%)\n', participantID, falseAlarms, falseAlarmRate);
+    %--------------------------------------------------------
+    % Apply EXACT gate (no changes/additions):
+    %   Include if FA >= 10 AND FA rate < 50%
+    %--------------------------------------------------------
+    pass = (faCount >= 10) && (faRate < 50);
+
+    if pass
+        %-----------------------------------------------
+        % Participant passes:
+        %   - Re-save the SAME X and y (unchanged)
+        %   - Use same naming pattern in the output dir
+        %-----------------------------------------------
+        outName = sprintf('stage3_%s.mat', pid);
+        save(fullfile(outputDir, outName), 'X', 'y');
+
+        % Record inclusion and print a concise status line
+        included{end+1} = pid; %#ok<SAGROW>
+        fprintf('✅ ID %s INCLUDED | FA=%d, CR=%d, FA rate=%.2f%% | saved %s\n', ...
+            pid, faCount, crCount, faRate, outName);
     else
-        excluded_FA_CR{end+1} = participantID;
-        fprintf('❌ Participant %s excluded (FA count = %d, FA rate = %.2f%%)\n', participantID, falseAlarms, falseAlarmRate);
+        % Participant fails the gate; do not save X,y.
+        excluded{end+1} = pid; %#ok<SAGROW>
+        fprintf('❌ ID %s EXCLUDED | FA=%d, CR=%d, FA rate=%.2f%%\n', ...
+            pid, faCount, crCount, faRate);
     end
 end
 
-% Save filtered participant lists
-save(fullfile(outputDir, 'filtered_FA_CR_participants.mat'), 'filteredParticipants_FA_CR');
-save(fullfile(outputDir, 'excluded_FA_CR_participants.mat'), 'excluded_FA_CR');
+%---------------------------------------
+% Persist inclusion/exclusion lists
+%---------------------------------------
+save(fullfile(outputDir, 'filtered_FA_CR_participants.mat'), 'included');
+save(fullfile(outputDir, 'excluded_FA_CR_participants.mat'), 'excluded');
 
-fprintf('\nFA/CR filtering complete: %d participants included, %d excluded.\n', length(filteredParticipants_FA_CR), length(excluded_FA_CR));
+% Final summary line
+fprintf('\nSummary: %d files processed | %d included | %d excluded.\n', ...
+    numel(files), numel(included), numel(excluded));
