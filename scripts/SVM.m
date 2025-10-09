@@ -15,8 +15,10 @@ if useRawPath
     fprintf('Using RAW data path\n');
 else
     % ADD YOUR FILTERED PATH HERE
-    inputDir  = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage3";
-    featurePattern = 'stage3_*.mat';  % Update this pattern if different
+   % inputDir  = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage3";
+    inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\d_prime";
+    %featurePattern = 'stage3_*.mat';  % Update this pattern if different
+    featurePattern = 'dprime_exclusion_*.mat';
     outputFileName = 'SVM_results_filtered.mat';
     fprintf('Using FILTERED data path\n');
 end

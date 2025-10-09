@@ -5,8 +5,8 @@
 %----------------------------
 % Directory configuration
 %----------------------------
-inputDir  = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving_bin_after_filter";
-outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage3";
+inputDir  = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\moving_bin_raw";
+outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\d_prime";
 
 % Ensure the output directory exists; create if it does not.
 if ~exist(outputDir, 'dir')
@@ -107,18 +107,19 @@ for i = 1:numel(files)
 
     D_PRIME_THRESHOLD = 0.5;
 
-    pass(d_prime_val >= D_PRIME_THRESHOLD);
+    pass=(d_prime_val >= D_PRIME_THRESHOLD);
 
     if pass 
         outName= sprintf('dprime_exclusion_%s.mat', pid);
         save(fullfile(outputDir, outName), 'X', 'y');
 
-        included{end+1} = pids;
+        included{end+1} = pid;
         fprintf('✅ ID %s INCLUDED | d''=%.3f | Hits=%d, FA=%d, HR=%.2f%%, FAR=%.2f%% | saved %s\n', ...
-        pid, d_prime, hitCount, faCount, hitRate*100, faRate*100, outName)
+        pid, d_prime_val, hitCount, faCount, hitRate*100, faRate*100, outName)
 
     else 
         excluded{end+1} = pid; %#ok<SAGROW>
     fprintf('❌ ID %s EXCLUDED | d''=%.3f | Hits=%d, FA=%d, HR=%.2f%%, FAR=%.2f%%\n', ...
-        pid, d_prime, hitCount, faCount, hitRate*100, faRate*100);
+        pid, d_prime_val, hitCount, faCount, hitRate*100, faRate*100);
+    end
 end

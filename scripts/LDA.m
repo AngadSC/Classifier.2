@@ -15,8 +15,10 @@ if useRawPath
     fprintf('Using RAW data path\n');
 else
     % ADD YOUR FILTERED PATH HERE
-    inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage3";  % Update this path
-    featurePattern = 'stage3_*.mat';  % Update this if the name the stage3 filter is saved as something else
+   % inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage3";  % Update this path
+    inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\d_prime"; 
+    %featurePattern = 'stage3_*.mat';  % Update this if the name the stage3 filter is saved as something else
+    featurePattern = 'dprime_exclusion_*.mat';
     outputFileName = 'LDA_results_filtered.mat';
     fprintf('Using FILTERED data path\n');
 end
