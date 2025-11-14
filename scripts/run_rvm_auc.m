@@ -9,6 +9,12 @@ function AUC = run_rvm_auc(X,y, label, participant, kernelType, gamma)
 %   kernelType - kernel type for RVM (default: 'gaussian')
 %   gamma - gamma parameter for kernel (default: 0.5)
 
+
+% need to do a normalziation to the y for it to work witht the rvm
+% libraryto work 
+y = double(y(:));
+X=zscore(X);
+
 %----------------default params----------------------------
 if nargin < 5 || isempty(kernelType)
     kernelType = 'gaussian'; %default kernel 
@@ -151,6 +157,8 @@ AUCs = nan(k, 1);
         catch
             % If SMOTE fails, proceed with original training data
         end
+        %also needed to make it work with the library
+        y_train = double(y_train(:));
 
         % ------------------ Train RVM model ------------------
         % Set up kernel function based on input parameters
@@ -160,7 +168,7 @@ AUCs = nan(k, 1);
             case 'linear'
                 kernel = Kernel('type', 'linear');
             case 'polynomial'
-                % You can add more parameters if needed
+                % we can add mmore params as we see fit 
                 kernel = Kernel('type', 'polynomial', 'gamma', gamma, 'offset', 0, 'degree', 2);
             case 'sigmoid'
                 kernel = Kernel('type', 'sigmoid', 'gamma', gamma, 'offset', 0);
@@ -183,9 +191,14 @@ AUCs = nan(k, 1);
         try
             % Train RVM (it automatically handles binary classification conversion)
             rvm.train(X_train, y_train);
+
             
-            % Test on the test set
-            results = rvm.test(X(testIdx,:), y(testIdx));
+
+             
+            
+            X_test = X(testIdx,:);
+            y_test = double(y(testIdx));
+            results = rvm.test(X_test, y_test);
             
             % Get probability scores for AUC calculation
             % The RVM returns binary predictions, but we need probabilities
@@ -205,8 +218,8 @@ AUCs = nan(k, 1);
             probabilities = SB2_Sigmoid(decision_values);
             
             % Compute AUC
-            % Note: RVM internally converts labels to 0/1, where the second class is 1
-            [~, ~, ~, auc] = perfcurve(y(testIdx), probabilities, 1);
+            %  RVM internally converts labels to 0/1, where the second class is 1
+            [~, ~, ~, auc] = perfcurve(y_test, probabilities, 1);
             
             AUCs(i) = auc;
             
