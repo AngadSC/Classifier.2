@@ -1,7 +1,7 @@
 % ------------------ Path Selection Flag ------------------
 % Set this to true for raw data, false for filtered data
 useRawPath = false;  % CHANGE THIS FLAG TO SWITCH BETWEEN RAW AND FILTERED
-kernelType = 'gaussian'; % we can change it i already coded it into the function 
+kernelType = 'laplacian'; % we can change it i already coded it into the function 
 gamma = 0.5;
 
 % ------------------ Setup ------------------
