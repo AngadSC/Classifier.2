@@ -48,13 +48,13 @@ startAfterBaseline = baselineEnd + 1;
 
 % ---------------- Gather EEG files ----------------
 % Prefer study_*.mat, then finalcorrected_EEG_*.mat, then test_*.mat as last fallback.
-eegFiles = dir(fullfile(inputDir, 'study_*.mat'));
+eegFiles = dir(fullfile(inputDir, 'events_*.mat'));
 if isempty(eegFiles)
     eegFiles = dir(fullfile(inputDir, 'finalcorrected_EEG_*.mat'));
 end
-if isempty(eegFiles)
-    eegFiles = dir(fullfile(inputDir, 'test_*.mat'));
-end
+%if isempty(eegFiles)
+%    eegFiles = dir(fullfile(inputDir, 'test_*.mat'));
+%end
 if isempty(eegFiles)
     error('No EEG files found at: %s', inputDir);
 end
