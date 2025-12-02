@@ -1,214 +1,249 @@
-function outFiles = study_phase_feature_extractor(inputDir, outputDir, inputDir_label, electrodes, transformation)
-% FEATURE_LABEL_MOVING_BIN_STUDY_V3  Moving time-bin EEG features for STUDY phase
-%
-% Usage (example):
-%   outFiles = feature_label_moving_bin_study_v3('/path/to/data', ...
-%               fullfile(pwd,'output_moving_bins_study'), [], [], 'raw');
-%
-% Inputs (all optional):
-%   inputDir        : folder containing study EEG .mat files (e.g. study_XX.mat or finalcorrected_EEG_XX.mat)
-%   outputDir       : where to write features
-%   inputDir_label  : folder containing events_XX.mat
-%   electrodes      : vector of channel indices to use
-%   transformation  : 'raw' | 'abs' | 'square' | 'cube'
-%
-% Output:
-%   outFiles        : cellstr of saved .mat files (one per participant)
+% ========================================================
+% SWAPPABLE Moving Timebin Feature Extraction – STUDY PHASE
+% Mirrors the TEST moving-bin script, but uses:
+%   - EEG from:   studyData
+%   - Labels from events_X.mat (variable "study", col 2)
+%   - Output to:  outputs\study_moving_bin
+% ========================================================
 
-% ---------------- Defaults ----------------
-if nargin < 1 || isempty(inputDir)
-    inputDir = fullfile(pwd, 'data');
-end
-if nargin < 2 || isempty(outputDir)
-    outputDir = fullfile(pwd, 'feature_label_moving_study_v3');
-end
-if nargin < 3 || isempty(inputDir_label)
-    inputDir_label = inputDir;
-end
-if nargin < 4 || isempty(electrodes)
-    electrodes = [64 194 21 41 214 8 101 87 153 137];  % 10 electrodes
-end
-if nargin < 5 || isempty(transformation)
-    transformation = 'raw';
+% ============== CONFIGURATION SWITCH ==============
+% CHANGE THIS TO SWITCH BETWEEN RAW AND FILTERED STUDY DATA
+USE_RAW_DATA = true;  % true = raw studyData, false = stage2 filtered
+% ==================================================
+
+if USE_RAW_DATA
+    % ---------- RAW STUDY DATA CONFIGURATION ----------
+    inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\studyData";
+    inputDir_label = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\data";
+    outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\study_moving_bin";
+
+    % Adjust these patterns if your filenames differ
+    eegPattern   = 'OldNew_*_stims.mat';          % e.g., study_20.mat
+    eventPattern = 'events_%s.mat';        % events_20.mat
+    eegPrefix    = 'study_';
+
+    % Variable names in RAW study files
+    eegVarName      = 'stimdata';   % EEG variable inside study_XX.mat
+    eventVarName    = 'study';  % matrix [nTrials x 2], use column 2
+    useEventColumn  = true;
+    eventColumn     = 2;
+
+    fprintf('=== STUDY PHASE: USING RAW DATA ===\n');
+
+else
+    % ---------- STAGE2 FILTERED STUDY DATA CONFIG ----------
+    % You can adjust these paths once you have stage2 study files
+    inputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\stage2_study";
+    inputDir_label = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\data";
+    outputDir = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\study_moving_bin_after_filter";
+
+    % Example pattern for filtered study EEG – update to your real names
+    eegPattern   = 'stage2_filter_study_EEG_*.mat';
+    eventPattern = 'events_%s.mat';          % still events_20.mat etc.
+    eegPrefix    = 'stage2_filter_study_EEG_';
+
+    % Variable names in stage2 files
+    eegVarName      = 'data';
+    eventVarName    = 'study';   % same event structure, column 2 codes
+    useEventColumn  = true;
+    eventColumn     = 2;
+
+    fprintf('=== STUDY PHASE: USING STAGE2 FILTERED DATA ===\n');
 end
 
-% Ensure output directory exists and is writable (fallback to tempdir if not)
-outputDir = ensureWritableDir(outputDir);
+% ---------- Common Parameters ----------
+transformation = 'raw';  % 'raw' | 'abs' | 'square' | 'cube'
+electrodes = [64 194 21 41 214 8 101 87 153 137];  % 10 electrodes
+nElectrodes = numel(electrodes);
 
-% ---------------- Parameters ----------------
-samplerate = 250;           % Hz
-binDurSec  = 0.100;         % 100 ms windows
-stepDurSec = 0.040;         % 40 ms step between windows
-baselineDurSec = 0.100;     % skip first 100 ms as baseline
+samplerate = 250;  % Hz
 
-binSize  = max(1, round(binDurSec  * samplerate));
-binStep  = max(1, round(stepDurSec * samplerate));
-baselineEnd = max(0, round(baselineDurSec * samplerate));
+binSize     = round(0.10 * samplerate);  % 100 ms
+binStep     = round(0.04 * samplerate);  % 40 ms
+baselineEnd = round(0.10 * samplerate);  % first 100 ms
 startAfterBaseline = baselineEnd + 1;
 
-% ---------------- Gather EEG files ----------------
-% Prefer study_*.mat, then finalcorrected_EEG_*.mat, then test_*.mat as last fallback.
-eegFiles = dir(fullfile(inputDir, 'events_*.mat'));
-if isempty(eegFiles)
-    eegFiles = dir(fullfile(inputDir, 'finalcorrected_EEG_*.mat'));
-end
-%if isempty(eegFiles)
-%    eegFiles = dir(fullfile(inputDir, 'test_*.mat'));
-%end
-if isempty(eegFiles)
-    error('No EEG files found at: %s', inputDir);
+% ---------- Create output directory ----------
+if ~exist(outputDir, 'dir')
+    mkdir(outputDir);
 end
 
-outFiles = {};
+% ---------- Get EEG files ----------
+eegFiles = dir(fullfile(inputDir, eegPattern));
+
+if isempty(eegFiles)
+    error('No %s files found in: %s', eegPattern, inputDir);
+end
+
+fprintf('Found %d STUDY EEG files to process\n', numel(eegFiles));
+fprintf('EEG directory:    %s\n', inputDir);
+fprintf('Event directory:  %s\n', inputDir_label);
+fprintf('Output directory: %s\n', outputDir);
+fprintf('========================================\n');
+
+% ---------- Process each participant ----------
+successCount = 0;
+failCount    = 0;
 
 for i = 1:numel(eegFiles)
-    % Participant ID from filename (digits)
-    participantID = regexp(eegFiles(i).name, '\d+', 'match', 'once');
+    participantID = 'UNKNOWN';
+    try
+        filename = eegFiles(i).name;
 
-    % ---- Load EEG ----
-    eegFile = fullfile(inputDir, eegFiles(i).name);
-    S = load(eegFile);
+        % Extract participant ID from filename
+        if USE_RAW_DATA
+            % For study_XX.mat
+            participantID = regexp(filename, '(?<=OldNew_)\d+(?=_stims\.mat)', 'match', 'once');
+        else
+            % For stage2_filter_study_EEG_XX.mat
+            participantID = regexp(filename, '(?<=stage2_filter_study_EEG_)\d+(?=\.mat)', 'match', 'once');
+        end
 
-    % Try common variable names
-    if isfield(S, 'correctedEEG')
-        eeg = S.correctedEEG;
-    elseif isfield(S, 'EEG')
-        eeg = S.EEG;
-    elseif isfield(S, 'data')
-        eeg = S.data;      % matches your test_XX.mat structure
-    else
-        error('Could not find EEG array in %s (looked for correctedEEG/EEG/data).', eegFile);
-    end
+        if isempty(participantID)
+            fprintf('Warning: Could not extract ID from %s, skipping...\n', filename);
+            failCount = failCount + 1;
+            continue;
+        end
 
-    eeg = double(eeg);   % ensure numeric
-    if ndims(eeg) ~= 3
-        error('EEG must be 3D (channels x time x trials). Got size %s.', mat2str(size(eeg)));
-    end
+        fprintf('Processing STUDY participant %s...\n', participantID);
 
-    nCh     = size(eeg,1);
-    nTime   = size(eeg,2);
-    nTrials = size(eeg,3);
+        % ---- Load EEG data ----
+        eegFile   = fullfile(inputDir, filename);
+        eegStruct = load(eegFile);
 
-    % Channel sanity check
-    if any(electrodes > nCh)
-        error('Electrode index exceeds available channels. Max channel = %d', nCh);
-    end
+        if isfield(eegStruct, eegVarName)
+            eeg = eegStruct.(eegVarName);
+        elseif isfield(eegStruct, 'data')
+            eeg = eegStruct.data;  % fallback
+        else
+            error('No EEG data found in %s (looked for "%s" or "data")', ...
+                  eegFile, eegVarName);
+        end
 
-    % ---- Load STUDY labels from events_X.mat ----
-    eventFile = fullfile(inputDir_label, sprintf('events_%s.mat', participantID));
-    if ~exist(eventFile, 'file')
-        warning('No events file %s for participant %s. Skipping.', eventFile, participantID);
-        continue;
-    end
+        % ---- Load event data (labels) ----
+        eventFile = fullfile(inputDir_label, sprintf(eventPattern, participantID));
 
-    E = load(eventFile);
+        if ~exist(eventFile, 'file')
+            fprintf('Error: Event file not found: %s\n', eventFile);
+            fprintf('Skipping participant %s...\n\n', participantID);
+            failCount = failCount + 1;
+            continue;
+        end
 
-    if isfield(E, 'study')
-        ev = E.study;   % expected [nTrials x 2]: [time, label]
-    else
-        error('Could not find ''study'' variable in %s.', eventFile);
-    end
+        L = load(eventFile);
 
-    if size(ev,2) < 2
-        error('study variable in %s must be N x 2 (time, label). Got %s.', eventFile, mat2str(size(ev)));
-    end
-
-    labels = ev(:,2);       % 0 = forgotten, 1 = remembered
-    labels = labels(:);     % column vector
-
-    % Trial count check
-    if numel(labels) ~= nTrials
-        warning('Mismatch EEG(%d trials) vs study labels(%d) for %s. Skipping.', ...
-            nTrials, numel(labels), participantID);
-        continue;
-    end
-
-    % ---- Moving windows ----
-    maxIdx = nTime; % number of time samples
-    if startAfterBaseline > maxIdx - binSize + 1
-        warning('Not enough post-baseline samples for %s. Skipping.', participantID);
-        continue;
-    end
-    startBins   = startAfterBaseline:binStep:(maxIdx - binSize + 1);
-    nMovingBins = numel(startBins);
-
-    % Preallocate features
-    nElectrodes = numel(electrodes);
-    X = zeros(nTrials, nElectrodes * nMovingBins, 'double');
-    y = labels;  % 0/1 remembered vs forgotten; binarize in downstream code if needed
-
-    % ---- Feature extraction ----
-    for t = 1:nTrials
-        featureVec = zeros(1, nElectrodes * nMovingBins);
-        idx = 0;
-        for e = 1:nElectrodes
-            ch = electrodes(e);
-            for b = 1:nMovingBins
-                startIdx = startBins(b);
-                endIdx   = startIdx + binSize - 1;
-                binData  = eeg(ch, startIdx:endIdx, t);
-                switch lower(transformation)
-                    case 'raw'
-                        featureVal = mean(binData);
-                    case 'abs'
-                        featureVal = mean(abs(binData));
-                    case 'square'
-                        featureVal = mean(binData.^2);
-                    case 'cube'
-                        featureVal = mean(binData.^3);
-                    otherwise
-                        error('Unknown transformation: %s', transformation);
-                end
-                idx = idx + 1;
-                featureVec(idx) = featureVal;
+        % Get labels from "study" matrix or fallbacks
+        if isfield(L, eventVarName)
+            if useEventColumn && size(L.(eventVarName), 2) >= eventColumn
+                labels = L.(eventVarName)(:, eventColumn);
+            else
+                labels = L.(eventVarName)(:);
+            end
+        else
+            % flex fallbacks just in case
+            if isfield(L, 'study') && size(L.study, 2) >= 2
+                labels = L.study(:, 2);
+            elseif isfield(L, 'label')
+                labels = L.label(:);
+            else
+                error('No usable STUDY labels found in %s', eventFile);
             end
         end
-        X(t, :) = featureVec;
+
+        labels = labels(:);  % ensure column
+
+        % ---- Trial count and bin setup ----
+        [nCh, nTime, nTrials] = size(eeg);
+
+        if numel(labels) ~= nTrials
+            % For study phase, mismatch is an error (no artifact-rej version yet)
+            error('Trial mismatch for %s: EEG=%d trials, labels=%d', ...
+                  participantID, nTrials, numel(labels));
+        end
+
+        maxIdx    = nTime;
+        startBins = startAfterBaseline:binStep:(maxIdx - binSize + 1);
+        nMovingBins = numel(startBins);
+
+        fprintf('  - EEG: [%d electrodes x %d timepoints x %d trials]\n', ...
+                nCh, nTime, nTrials);
+        fprintf('  - Features per trial: %d (%d bins x %d electrodes)\n', ...
+                nElectrodes * nMovingBins, nMovingBins, nElectrodes);
+
+        % ---- Preallocate ----
+        X = zeros(nTrials, nElectrodes * nMovingBins);
+        y = labels;
+
+        % ---- Feature extraction ----
+        for t = 1:nTrials
+            featureVec = zeros(1, nElectrodes * nMovingBins);
+            idx = 0;
+
+            for e = 1:nElectrodes
+                ch = electrodes(e);
+
+                if ch > nCh
+                    error('Electrode %d exceeds available channels (%d)', ch, nCh);
+                end
+
+                for b = 1:nMovingBins
+                    startIdx = startBins(b);
+                    endIdx   = startIdx + binSize - 1;
+
+                    binData = eeg(ch, startIdx:endIdx, t);
+
+                    % Apply transformation
+                    switch transformation
+                        case 'raw'
+                            featureVal = mean(binData);
+                        case 'abs'
+                            featureVal = mean(abs(binData));
+                        case 'square'
+                            featureVal = mean(binData .^ 2);
+                        case 'cube'
+                            featureVal = mean(binData .^ 3);
+                        otherwise
+                            error('Unknown transformation: %s', transformation);
+                    end
+
+                    idx = idx + 1;
+                    featureVec(idx) = featureVal;
+                end
+            end
+
+            X(t, :) = featureVec;
+        end
+
+        % ---- Print label summary (generic) ----
+        fprintf('  - Study label counts: ');
+        uni = unique(y);
+        for lbl = uni'
+            fprintf('Code%d=%d ', lbl, sum(y == lbl));
+        end
+        fprintf('\n');
+
+        % ---- Save results ----
+        outFile = fullfile(outputDir, ...
+            sprintf('features_labels_study_%s_%s.mat', transformation, participantID));
+
+        save(outFile, 'X', 'y');
+        fprintf('✓ Saved STUDY features for participant %s\n\n', participantID);
+        successCount = successCount + 1;
+
+    catch ME
+        fprintf('✗ Error processing STUDY participant %s: %s\n\n', participantID, ME.message);
+        failCount = failCount + 1;
     end
-
-    % ---- Save result ----
-    params = struct('samplerate', samplerate, 'binDurSec', binDurSec, ...
-                    'stepDurSec', stepDurSec, 'baselineDurSec', baselineDurSec, ...
-                    'binSizeSamples', binSize, 'binStepSamples', binStep, ...
-                    'baselineEndSamples', baselineEnd, 'startBins', startBins, ...
-                    'electrodes', electrodes, 'transformation', transformation, ...
-                    'phase', 'study');
-
-    outFile = fullfile(outputDir, sprintf('features_labels_study_%s_%s.mat', transformation, participantID));
-    save(outFile, 'X', 'y', 'params', '-v7');
-    fprintf('Saved STUDY %s (%d trials × %d features) for participant %s\n', ...
-            transformation, size(X,1), size(X,2), participantID);
-    outFiles{end+1} = outFile; %#ok<AGROW>
 end
 
-fprintf('\nStudy feature extraction complete for %d participant(s). Output: %s\n', numel(outFiles), outputDir);
-
+% ---------- Final Summary ----------
+fprintf('========================================\n');
+fprintf('STUDY FEATURE EXTRACTION COMPLETE\n');
+fprintf('EEG source:   %s\n', inputDir);
+fprintf('Event source: %s\n', inputDir_label);
+fprintf('Results to:   %s\n', outputDir);
+fprintf('Successfully processed: %d participant(s)\n', successCount);
+if failCount > 0
+    fprintf('Failed: %d participant(s)\n', failCount);
 end
-
-% ---------------- Helpers ----------------
-function outDir = ensureWritableDir(outDir)
-% Create outDir if needed; fall back to tempdir if creation or write test fails
-    if exist(outDir, 'file') == 2 && exist(outDir, 'dir') ~= 7
-        error('Output path exists as a FILE, not a folder: %s', outDir);
-    end
-    [ok, msg, msgid] = mkdir(outDir);
-    if ~ok
-        warning('mkdir failed for %s (%s: %s). Falling back to tempdir.', outDir, msgid, msg);
-        outDir = fullfile(tempdir, ['feature_label_moving_study_v3_' datestr(now,'yyyymmdd_HHMMSS')]);
-        [ok2, msg2, msgid2] = mkdir(outDir);
-        assert(ok2, 'Failed to create fallback output folder (%s: %s).', msgid2, msg2);
-    end
-    % Write test
-    probe = fullfile(outDir, '.write_test');
-    [fid, errmsg] = fopen(probe, 'w');
-    if fid < 0
-        warning('No write permission to %s (%s). Using tempdir fallback.', outDir, errmsg);
-        outDir = fullfile(tempdir, ['feature_label_moving_study_v3_' datestr(now,'yyyymmdd_HHMMSS')]);
-        [ok3, msg3, msgid3] = mkdir(outDir);
-        assert(ok3, 'Failed to create fallback folder (%s: %s).', msgid3, msg3);
-        fid = fopen(fullfile(outDir, '.write_test'), 'w');
-        assert(fid >= 0, 'Still cannot write to fallback directory: %s', outDir);
-    end
-    fclose(fid);
-    if exist(probe, 'file') == 2, delete(probe); end
-end
+fprintf('========================================\n');
