@@ -10,12 +10,12 @@ useRawResults = false;   % <-- toggle here
 % ------------------ Resolve results file + label ------------------
 if useRawResults
     transformation_type = 'raw';
-    resultsFile = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\SVM\SVM_results_raw.mat";
-    fprintf('Using RAW SVM results\n');
+    resultsFile = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\RVM_results_raw.mat";
+    fprintf('Using RAW RVM results\n');
 else
     transformation_type = 'filtered';
-    resultsFile = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\SVM\SVM_results_filtered.mat";
-    fprintf('Using FILTERED SVM results\n');
+    resultsFile = "C:\Users\Angad\OneDrive\Desktop\Comp Memory Lab\Classifier.2\outputs\RVM_results_filtered.mat";
+    fprintf('Using FILTERED RVM results\n');
 end
 
 % ------------------ Load SVM results ------------------

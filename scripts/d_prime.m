@@ -84,28 +84,19 @@ for i = 1:numel(files)
     
     %Computing edge cases lile if hit rate is 1 
 
-    if hitRate ==1
-        hitRate =1 -1/(2*oldTrials);
-    elseif hitRate ==0
-        hitRate =1/(2*oldTrials);
-    end
-
-    %if the fa rate is 1 or 0 edge cases
-    if faRate == 1
-        faRate = 1 - 1/(2*newTrials);
-    elseif faRate == 0
-        faRate = 1/(2*newTrials);
-    end
+    hitRate = (hitCount + 0.5) / (oldTrials + 1.0);
+    faRate  = (faCount  + 0.5) / (newTrials + 1.0);
 
     %d' calculations 
 
     d_prime_val = norminv(hitRate) - norminv(faRate);
+    crit = -0.5 * (norminv(hitRate) + norminv(faRate));
 
     pid = regexp(fname, '\d+', 'match', 'once');
 
     %threshold adjustable d'>=threshold ( keep trial)
 
-    D_PRIME_THRESHOLD = 0.5;
+    D_PRIME_THRESHOLD = 0.0;
 
     pass=(d_prime_val >= D_PRIME_THRESHOLD);
 
@@ -114,12 +105,12 @@ for i = 1:numel(files)
         save(fullfile(outputDir, outName), 'X', 'y');
 
         included{end+1} = pid;
-        fprintf('✅ ID %s INCLUDED | d''=%.3f | Hits=%d, FA=%d, HR=%.2f%%, FAR=%.2f%% | saved %s\n', ...
-        pid, d_prime_val, hitCount, faCount, hitRate*100, faRate*100, outName)
+        fprintf(' ID %s INCLUDED | d''=%.3f,c=%.3f | Hits=%d, FA=%d, HR=%.2f%%, FAR=%.2f%% | saved %s\n', ...
+        pid, d_prime_val,crit, hitCount, faCount, hitRate*100, faRate*100, outName)
 
     else 
         excluded{end+1} = pid; %#ok<SAGROW>
-    fprintf('❌ ID %s EXCLUDED | d''=%.3f | Hits=%d, FA=%d, HR=%.2f%%, FAR=%.2f%%\n', ...
-        pid, d_prime_val, hitCount, faCount, hitRate*100, faRate*100);
+    fprintf('X ID %s EXCLUDED | d''=%.3f, c%.3f | Hits=%d, FA=%d, HR=%.2f%%, FAR=%.2f%%\n', ...
+        pid, d_prime_val, crit, hitCount, faCount, hitRate*100, faRate*100);
     end
 end
